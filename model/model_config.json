@@ -1,0 +1,24 @@
+{
+  "model_type": "TextCNN_BiLSTM_Attention",
+  "vocab_size": 351,
+  "embed_dim": 300,
+  "num_filters": 200,
+  "kernel_sizes": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "lstm_hidden": 256,
+  "lstm_layers": 2,
+  "num_classes": 3,
+  "dropout": 0.35,
+  "max_seq_len": 64,
+  "label_map": {
+    "0": "负面",
+    "1": "中性",
+    "2": "正面"
+  },
+  "test_acc": 1.0,
+  "best_val_acc": 1.0
+}

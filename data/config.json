@@ -1,0 +1,11 @@
+{
+  "vocab_size": 10000,
+  "max_seq_len": 64,
+  "embedding_dim": 256,
+  "num_classes": 3,
+  "label_map": {
+    "0": "负面",
+    "1": "中性",
+    "2": "正面"
+  }
+}

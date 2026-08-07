@@ -1,0 +1,98 @@
+{
+  "model_type": "TextCNN_BiLSTM_Attention",
+  "test_accuracy": 1.0,
+  "best_val_accuracy": 1.0,
+  "best_epoch": 3,
+  "num_params": 5809399,
+  "history": {
+    "tl": [
+      0.175463,
+      0.02733,
+      0.009456,
+      0.006279,
+      0.004864,
+      0.003357,
+      0.007623,
+      0.003596,
+      0.00724,
+      0.006948,
+      0.005664
+    ],
+    "vl": [
+      0.025566,
+      0.013851,
+      0.002067,
+      0.001332,
+      0.001398,
+      0.001212,
+      0.001339,
+      0.001459,
+      0.004693,
+      0.001581,
+      0.001177
+    ],
+    "va": [
+      0.975976,
+      0.984985,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.993994,
+      1.0,
+      1.0
+    ]
+  },
+  "classification_report": {
+    "负面": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 117.0
+    },
+    "中性": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 104.0
+    },
+    "正面": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 112.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 333.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 333.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      117,
+      0,
+      0
+    ],
+    [
+      0,
+      104,
+      0
+    ],
+    [
+      0,
+      0,
+      112
+    ]
+  ]
+}

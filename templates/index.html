@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>短文本舆情分类系统 - DNN</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#4f46e5;--primary-dark:#3730a3;--primary-light:#818cf8;
+  --negative:#ef4444;--neutral:#f59e0b;--positive:#10b981;
+  --bg:#f1f5f9;--card:#fff;--text:#1e293b;--text2:#64748b;--border:#e2e8f0;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 10px 25px rgba(0,0,0,.08);
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.header{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);color:#fff;padding:24px 0;text-align:center;box-shadow:0 4px 20px rgba(79,70,229,.3)}
+.header h1{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.header p{font-size:14px;opacity:.85;margin-top:4px}
+.header .badge{display:inline-block;background:rgba(255,255,255,.15);border-radius:20px;padding:3px 14px;font-size:12px;margin-top:8px}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.card h2{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.card h2 .icon{font-size:20px}
+.full{grid-column:1/-1}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+@media(max-width:700px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+.metric-card{background:var(--bg);border-radius:var(--radius-sm);padding:16px;text-align:center}
+.metric-card .val{font-size:28px;font-weight:800;color:var(--primary)}
+.metric-card .lbl{font-size:12px;color:var(--text2);margin-top:4px}
+
+textarea{width:100%;min-height:120px;padding:12px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;resize:vertical;font-family:inherit;transition:border-color .2s;background:#f8fafc}
+textarea:focus{outline:none;border-color:var(--primary);background:#fff}
+textarea::placeholder{color:#cbd5e1}
+
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;border:none;padding:10px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,70,229,.3)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:#e2e8f0;color:var(--text)}
+.btn-secondary:hover{background:#cbd5e1;color:#000;box-shadow:none}
+.btn-tag{display:inline-flex;align-items:center;gap:4px;border:none;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:#e2e8f0;color:#475569}
+.btn-tag:hover{transform:translateY(-1px)}
+.btn-tag.btn-neg{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.btn-tag.btn-neg:hover{background:#fee2e2}
+.btn-tag.btn-neu{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+.btn-tag.btn-neu:hover{background:#fef3c7}
+.btn-tag.btn-pos{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0}
+.btn-tag.btn-pos:hover{background:#d1fae5}
+.btn-tag.active-tag{outline:2px solid var(--primary);outline-offset:1px}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.sample-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+
+.result-box{background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-top:16px;display:none}
+.result-box.show{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.result-label{display:inline-flex;align-items:center;padding:6px 16px;border-radius:20px;font-weight:600;font-size:15px;margin-bottom:12px}
+.result-label.正面{background:#ecfdf5;color:#059669}
+.result-label.负面{background:#fef2f2;color:#dc2626}
+.result-label.中性{background:#fffbeb;color:#d97706}
+
+.prob-bars{display:flex;flex-direction:column;gap:8px}
+.prob-bar{display:flex;align-items:center;gap:8px}
+.prob-bar .name{width:50px;text-align:right;font-size:13px;font-weight:600;color:var(--text2)}
+.prob-bar .track{flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
+.prob-bar .fill{height:100%;border-radius:5px;transition:width .5s}
+.prob-bar .fill.negative{background:var(--negative)}
+.prob-bar .fill.neutral{background:var(--neutral)}
+.prob-bar .fill.positive{background:var(--positive)}
+.prob-bar .val{width:55px;font-size:13px;font-weight:600;color:var(--text)}
+.prob-bar .conf{width:48px;font-size:11px;color:var(--text2)}
+
+.table-wrap{overflow-x:auto;margin-top:12px;max-height:400px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+table th{background:#f1f5f9;padding:10px 12px;text-align:left;font-weight:700;color:var(--text);position:sticky;top:0;z-index:1}
+table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+table tr:hover{background:#f8fafc}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.tag.负面{background:#fef2f2;color:#dc2626}
+.tag.中性{background:#fffbeb;color:#d97706}
+.tag.正面{background:#ecfdf5;color:#059669}
+
+.file-upload{position:relative;margin-top:8px}
+.file-upload input[type=file]{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer}
+.file-upload-label{display:block;border:2px dashed var(--border);border-radius:var(--radius-sm);padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc}
+.file-upload-label:hover{border-color:var(--primary);background:#f0f0ff}
+.file-upload-label .icon{font-size:36px;margin-bottom:8px}
+.file-upload-label .text{font-size:14px;color:var(--text2)}
+.file-info{margin-top:8px;font-size:13px;color:var(--primary);font-weight:500}
+
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 20px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+.conf-matrix{overflow-x:auto}
+.conf-matrix table{font-size:12px;min-width:300px}
+.conf-matrix td, .conf-matrix th{text-align:center;padding:6px 10px}
+.conf-matrix .cell-high{background:#ecfdf5;font-weight:700}
+
+.stats-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.stat-item{background:var(--bg);padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600}
+
+.history-list{max-height:500px;overflow-y:auto}
+.history-item{background:var(--bg);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:10px;border-left:4px solid var(--border)}
+.history-item.neg{border-left-color:var(--negative)}
+.history-item.neu{border-left-color:var(--neutral)}
+.history-item.pos{border-left-color:var(--positive)}
+.history-item .h-text{font-size:13px;color:var(--text);margin-bottom:6px;word-break:break-all}
+.history-item .h-meta{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text2)}
+.history-item .h-time{font-size:11px;color:#94a3b8}
+.history-empty{text-align:center;padding:40px;color:var(--text2)}
+.history-empty .h-icon{font-size:48px;margin-bottom:12px}
+
+footer{text-align:center;padding:24px;color:var(--text2);font-size:12px}
+
+.loading{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading.dark{border-color:var(--primary);border-top-color:transparent}
+
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:var(--radius-sm);color:#fff;font-size:14px;z-index:999;animation:slideIn .3s;display:none}
+.toast.show{display:block}
+.toast.error{background:#ef4444}
+.toast.success{background:#10b981}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.tag-ghost{opacity:.5}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>短文本舆情分类系统</h1>
+  <p>基于 TextCNN + BiLSTM + MultiheadAttention 深度神经网络</p>
+  <span class="badge">ChnSentiCorp · 微博风格 · 三分类</span>
+</div>
+
+<div class="container">
+  <!-- 主功能区 -->
+  <div class="grid">
+    <!-- 左侧: 单条预测 -->
+    <div class="card">
+      <h2><span class="icon"></span> 单文本预测</h2>
+      <div class="sample-row">
+        <span style="font-size:12px;color:var(--text2);margin-right:4px">随机样本:</span>
+        <button class="btn-tag btn-neg" onclick="loadSingleSample('负面')" title="随机加载负面样本">😡 负面</button>
+        <button class="btn-tag btn-neu" onclick="loadSingleSample('中性')" title="随机加载中性样本">😐 中性</button>
+        <button class="btn-tag btn-pos" onclick="loadSingleSample('正面')" title="随机加载正面样本">😊 正面</button>
+      </div>
+      <textarea id="single-input" placeholder="请输入要分析的短文本，或点击上方按钮随机加载样本..."></textarea>
+      <div class="btn-group">
+        <button class="btn" onclick="predictSingle()" id="single-btn">分析</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('single-input').value=''">清空</button>
+      </div>
+      <div class="result-box" id="single-result"></div>
+    </div>
+
+    <!-- 右侧: 批量预测 -->
+    <div class="card">
+      <h2><span class="icon"></span> 批量预测</h2>
+      <div class="sample-row">
+        <span style="font-size:12px;color:var(--text2);margin-right:4px">添加样本:</span>
+        <button class="btn-tag btn-neg" onclick="appendBatchSample('负面')" title="追加一条负面样本">😡 负面</button>
+        <button class="btn-tag btn-neu" onclick="appendBatchSample('中性')" title="追加一条中性样本">😐 中性</button>
+        <button class="btn-tag btn-pos" onclick="appendBatchSample('正面')" title="追加一条正面样本">😊 正面</button>
+      </div>
+      <textarea id="batch-input" placeholder="点击上方按钮叠加样本，或直接输入多条文本（每行一条），然后点击「分析」..."></textarea>
+      <div class="btn-group">
+        <button class="btn" onclick="predictBatch()" id="batch-btn">分析</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('batch-input').value=''">清空</button>
+      </div>
+      <div class="result-box" id="batch-result"></div>
+      <div class="table-wrap" id="batch-table-wrap"></div>
+      <div class="stats-row" id="batch-stats"></div>
+    </div>
+  </div>
+
+  <!-- 文件上传 + 历史记录 -->
+  <div class="card full" style="margin-top:20px">
+    <div class="tabs">
+      <div class="tab active" data-tab="tab-file" onclick="switchTab('tab-file')">文件上传预测</div>
+      <div class="tab" data-tab="tab-history" onclick="switchTab('tab-history')">历史记录</div>
+    </div>
+
+    <div class="tab-panel active" id="tab-file">
+      <div class="file-upload">
+        <input type="file" id="file-input" accept=".txt,.csv" onchange="onFileSelected(event)">
+        <div class="file-upload-label">
+          <div class="icon"></div>
+          <div class="text">点击或拖拽上传 TXT / CSV 文件<br><small>支持 ChnSentiCorp 格式</small></div>
+        </div>
+      </div>
+      <div class="file-info" id="file-info"></div>
+      <div class="btn-group" style="margin-top:12px">
+        <button class="btn" onclick="predictFile()" id="file-btn" disabled>上传并分析</button>
+      </div>
+      <div class="result-box" id="file-result"></div>
+      <div class="table-wrap" id="file-table-wrap"></div>
+      <div class="stats-row" id="file-stats"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-history">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:14px;font-weight:600;color:var(--text)">分析历史记录</span>
+        <button class="btn btn-secondary" onclick="clearHistory()" style="font-size:12px;padding:6px 14px">清空记录</button>
+      </div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty">
+          <div class="h-icon"></div>
+          <div>暂无分析记录</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  短文本舆情分类系统 · TextCNN + BiLSTM + MultiheadAttention · PyTorch + Flask · ChnSentiCorp / 微博短文本
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+
+// 分情感的样本库
+const samplesBySentiment = {
+  负面: [
+    "这家店的服务态度很差，菜品也不新鲜，太让人失望了",
+    "物流太慢了等了五天才到，包装还破了，差评",
+    "客服态度太差了，太让人失望",
+    "等了两个小时还没上菜，太慢了",
+    "酒店隔音太差根本睡不着觉",
+    "产品质量太差了，用了两次就坏了，不会再买",
+    "快递员态度恶劣，直接扔门口就走了",
+    "买了假货，跟描述完全不一样，退款还拖着",
+    "太失望了，这家公司完全没有诚信",
+    "味道很差，价格还贵，再也不来了",
+  ],
+  中性: [
+    "今天天气还行，没什么特别的，就是个普通的工作日",
+    "这个产品一般般吧，能用但不算好",
+    "还行吧，没什么亮点也没什么槽点",
+    "普通的购物体验，快递速度正常",
+    "一般般，凑合着用吧",
+    "今天没什么特别的事情，平淡的一天",
+    "质量中规中矩，性价比一般",
+    "东西到了，包装完整，没啥好说的",
+  ],
+  正面: [
+    "酒店位置很好，房间干净舒适，服务员很热情，下次还来",
+    "这家餐厅味道超级好，下次还会来",
+    "物流超快隔天就到了，质量也很好",
+    "包装很精致，送货速度杠杠的",
+    "超级好吃！强烈推荐给大家",
+    "客服态度超赞，问题秒回，非常满意",
+    "性价比很高，物超所值，推荐购买",
+    "今天遇到了超暖心的陌生人，心情大好",
+    "环境优美服务周到，五星好评",
+    "物美价廉，已经推荐给朋友了",
+  ]
+};
+
+// 历史记录存储（从 MySQL 加载）
+let historyRecords = [];
+
+async function loadHistoryFromDB() {
+  try {
+    const res = await fetch(API + '/api/history');
+    const data = await res.json();
+    if (data.code === 0 && Array.isArray(data.data)) {
+      historyRecords = data.data.map(r => ({
+        text: r.text.length > 100 ? r.text.slice(0,100)+'...' : r.text,
+        fullText: r.text,
+        label: r.label_name,
+        confidence: r.confidence,
+        probs: r.probabilities,
+        time: r.time
+      }));
+    }
+  } catch(e) {
+    console.log('加载历史记录失败:', e);
+  }
+  renderHistory();
+}
+
+// 页面加载时从数据库加载历史记录
+loadHistoryFromDB();
+
+function addHistory(text, result) {
+  // 写入由后端自动完成，这里刷新列表
+  const rec = {
+    text: text.length > 100 ? text.slice(0,100)+'...' : text,
+    fullText: text,
+    label: result.label_name,
+    confidence: result.confidence,
+    probs: result.probabilities,
+    time: new Date().toLocaleString('zh-CN')
+  };
+  historyRecords.unshift(rec);
+  if (historyRecords.length > 100) historyRecords = historyRecords.slice(0, 100);
+  if (document.getElementById('tab-history').classList.contains('active')) {
+    renderHistory();
+  }
+}
+
+async function clearHistory() {
+  if (confirm('确定要清空所有历史记录吗？')) {
+    try {
+      const res = await fetch(API + '/api/history', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.code === 0) {
+        historyRecords = [];
+        renderHistory();
+        toast('历史记录已清空', 'success');
+      } else {
+        toast('清空失败', 'error');
+      }
+    } catch(e) {
+      toast('清空请求失败: ' + e.message, 'error');
+    }
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (historyRecords.length === 0) {
+    list.innerHTML = '<div class="history-empty"><div class="h-icon"></div><div>暂无分析记录</div></div>';
+    return;
+  }
+  let html = '';
+  historyRecords.forEach(r => {
+    const cls = r.label === '负面' ? 'neg' : (r.label === '中性' ? 'neu' : 'pos');
+    const emoji = r.label === '负面' ? '😡' : (r.label === '中性' ? '😐' : '😊');
+    html += `<div class="history-item ${cls}">
+      <div class="h-text">${r.text}</div>
+      <div class="h-meta">
+        <span class="tag ${r.label}">${emoji} ${r.label}</span>
+        <span>置信度: ${(r.confidence*100).toFixed(1)}%</span>
+        <span class="h-time">${r.time}</span>
+      </div>
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+function loadSingleSample(sentiment) {
+  const pool = samplesBySentiment[sentiment];
+  const idx = Math.floor(Math.random() * pool.length);
+  document.getElementById('single-input').value = pool[idx];
+  toast(`已加载「${sentiment}」样本`, 'success');
+}
+
+function appendBatchSample(sentiment) {
+  const pool = samplesBySentiment[sentiment];
+  const idx = Math.floor(Math.random() * pool.length);
+  const text = pool[idx];
+  const textarea = document.getElementById('batch-input');
+  const current = textarea.value.trim();
+  if (current) {
+    textarea.value = current + '\n' + text;
+  } else {
+    textarea.value = text;
+  }
+  toast(`已追加「${sentiment}」样本`, 'success');
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[data-tab="${id}"]`).classList.add('active');
+  document.getElementById(id).classList.add('active');
+  if (id === 'tab-history') renderHistory();
+}
+
+function renderLabel(label) {
+  return `<span class="result-label ${label}">${label}</span>`;
+}
+
+async function predictSingle() {
+  const text = document.getElementById('single-input').value.trim();
+  if (!text) { toast('请输入文本', 'error'); return; }
+  const btn = document.getElementById('single-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> 分析中...';
+  try {
+    const res = await fetch(API + '/api/predict', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    const box = document.getElementById('single-result');
+    if (data.code === 0) {
+      const d = data.data;
+      addHistory(text, d);
+      let html = renderLabel(d.label_name);
+      html += `<div style="margin-top:8px;font-size:13px;color:var(--text2)">置信度: ${(d.confidence*100).toFixed(2)}%</div>`;
+      html += '<div class="prob-bars">';
+      const names = ['负面', '中性', '正面'];
+      const cls = ['negative', 'neutral', 'positive'];
+      for (let i = 0; i < names.length; i++) {
+        const prob = d.probabilities[names[i]];
+        html += `<div class="prob-bar">
+          <span class="name">${names[i]}</span>
+          <div class="track"><div class="fill ${cls[i]}" style="width:${prob*100}%"></div></div>
+          <span class="val">${(prob*100).toFixed(1)}%</span>
+        </div>`;
+      }
+      html += '</div>';
+      box.innerHTML = html;
+    } else {
+      box.innerHTML = `<p style="color:var(--negative)">错误: ${data.error}</p>`;
+    }
+    box.classList.add('show');
+  } catch(e) {
+    toast('请求失败: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = '分析';
+}
+
+async function predictBatch() {
+  const raw = document.getElementById('batch-input').value.trim();
+  if (!raw) { toast('请输入批量文本', 'error'); return; }
+  const texts = raw.split('\n').filter(l => l.trim());
+  const btn = document.getElementById('batch-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> 分析中...';
+  try {
+    const res = await fetch(API + '/api/predict_batch', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({texts})
+    });
+    const data = await res.json();
+    const box = document.getElementById('batch-result');
+    if (data.code === 0) {
+      box.innerHTML = `<p style="color:var(--positive)">分析完成！共 ${data.data.total} 条，有效 ${data.data.valid} 条</p>`;
+      box.classList.add('show');
+      renderBatchTable(data.data.results);
+      renderBatchStats(data.data.results);
+      // 批量结果也加入历史
+      data.data.results.forEach(r => {
+        addHistory(r.text, r);
+      });
+    } else {
+      box.innerHTML = `<p style="color:var(--negative)">错误: ${data.error}</p>`;
+      box.classList.add('show');
+    }
+  } catch(e) {
+    toast('请求失败: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = '分析';
+}
+
+function renderBatchTable(results) {
+  const wrap = document.getElementById('batch-table-wrap');
+  let html = '<table><thead><tr><th>#</th><th>文本</th><th>标签</th><th>置信度</th><th>负面</th><th>中性</th><th>正面</th></tr></thead><tbody>';
+  results.forEach((r, i) => {
+    html += `<tr>
+      <td>${i+1}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.text}">${r.text}</td>
+      <td><span class="tag ${r.label_name}">${r.label_name}</span></td>
+      <td>${(r.confidence*100).toFixed(1)}%</td>
+      <td>${(r.probabilities['负面']*100).toFixed(1)}%</td>
+      <td>${(r.probabilities['中性']*100).toFixed(1)}%</td>
+      <td>${(r.probabilities['正面']*100).toFixed(1)}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderBatchStats(results) {
+  const stats = {负面: 0, 中性: 0, 正面: 0};
+  results.forEach(r => stats[r.label_name]++);
+  const box = document.getElementById('batch-stats');
+  box.innerHTML = '';
+  for (const [k, v] of Object.entries(stats)) {
+    const pct = results.length > 0 ? (v/results.length*100).toFixed(1) : 0;
+    box.innerHTML += `<span class="stat-item">${k}: ${v} (${pct}%)</span>`;
+  }
+}
+
+let selectedFile = null;
+
+function onFileSelected(e) {
+  selectedFile = e.target.files[0];
+  const info = document.getElementById('file-info');
+  const btn = document.getElementById('file-btn');
+  if (selectedFile) {
+    info.textContent = `已选择: ${selectedFile.name} (${(selectedFile.size/1024).toFixed(1)} KB)`;
+    btn.disabled = false;
+    document.getElementById('file-result').classList.remove('show');
+    document.getElementById('file-table-wrap').innerHTML = '';
+    document.getElementById('file-stats').innerHTML = '';
+  } else {
+    info.textContent = '';
+    btn.disabled = true;
+  }
+}
+
+async function predictFile() {
+  if (!selectedFile) { toast('请选择文件', 'error'); return; }
+  const btn = document.getElementById('file-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> 分析中...';
+  const form = new FormData();
+  form.append('file', selectedFile);
+  try {
+    const res = await fetch(API + '/api/predict_file', {
+      method: 'POST', body: form
+    });
+    const data = await res.json();
+    const box = document.getElementById('file-result');
+    if (data.code === 0) {
+      const d = data.data;
+      let html = `<p style="color:var(--positive)">分析完成！共 ${d.total} 条</p>`;
+      html += '<div style="margin-top:8px">';
+      for (const [k, v] of Object.entries(d.stats)) {
+        html += `<span class="stat-item">${k}: ${v}</span> `;
+      }
+      html += '</div>';
+      box.innerHTML = html;
+      box.classList.add('show');
+      renderFileTable(d.results);
+      renderFileStats(d.results);
+      d.results.forEach(r => addHistory(r.text, r));
+    } else {
+      box.innerHTML = `<p style="color:var(--negative)">错误: ${data.error}</p>`;
+      box.classList.add('show');
+    }
+  } catch(e) {
+    toast('请求失败: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = '上传并分析';
+}
+
+function renderFileTable(results) {
+  const wrap = document.getElementById('file-table-wrap');
+  let html = '<table><thead><tr><th>#</th><th>文本</th><th>标签</th><th>置信度</th><th>负面</th><th>中性</th><th>正面</th></tr></thead><tbody>';
+  results.forEach((r, i) => {
+    html += `<tr>
+      <td>${i+1}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.text}">${r.text}</td>
+      <td><span class="tag ${r.label_name}">${r.label_name}</span></td>
+      <td>${(r.confidence*100).toFixed(1)}%</td>
+      <td>${(r.probabilities['负面']*100).toFixed(1)}%</td>
+      <td>${(r.probabilities['中性']*100).toFixed(1)}%</td>
+      <td>${(r.probabilities['正面']*100).toFixed(1)}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderFileStats(results) {
+  const stats = {负面: 0, 中性: 0, 正面: 0};
+  results.forEach(r => stats[r.label_name]++);
+  const box = document.getElementById('file-stats');
+  box.innerHTML = '';
+  for (const [k, v] of Object.entries(stats)) {
+    const pct = results.length > 0 ? (v/results.length*100).toFixed(1) : 0;
+    box.innerHTML += `<span class="stat-item">${k}: ${v} (${pct}%)</span>`;
+  }
+}
+</script>
+</body>
+</html>

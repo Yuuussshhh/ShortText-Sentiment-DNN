@@ -1,0 +1,124 @@
+{
+  "naive_bayes": {
+    "accuracy": 0.6883116883116883,
+    "precision_weighted": 0.7031843211809256,
+    "recall_weighted": 0.6883116883116883,
+    "f1_weighted": 0.6875211491114456,
+    "classification_report": {
+      "负面": {
+        "precision": 0.6129032258064516,
+        "recall": 0.76,
+        "f1-score": 0.6785714285714286,
+        "support": 25.0
+      },
+      "中性": {
+        "precision": 0.7037037037037037,
+        "recall": 0.7307692307692307,
+        "f1-score": 0.7169811320754716,
+        "support": 26.0
+      },
+      "正面": {
+        "precision": 0.7894736842105263,
+        "recall": 0.5769230769230769,
+        "f1-score": 0.6666666666666666,
+        "support": 26.0
+      },
+      "accuracy": 0.6883116883116883,
+      "macro avg": {
+        "precision": 0.7020268712402272,
+        "recall": 0.6892307692307691,
+        "f1-score": 0.6874064091045223,
+        "support": 77.0
+      },
+      "weighted avg": {
+        "precision": 0.7031843211809256,
+        "recall": 0.6883116883116883,
+        "f1-score": 0.6875211491114456,
+        "support": 77.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        19,
+        4,
+        2
+      ],
+      [
+        5,
+        19,
+        2
+      ],
+      [
+        7,
+        4,
+        15
+      ]
+    ]
+  },
+  "svm": {
+    "accuracy": 0.7012987012987013,
+    "precision_weighted": 0.7297343179696121,
+    "recall_weighted": 0.7012987012987013,
+    "f1_weighted": 0.6971820706933173,
+    "classification_report": {
+      "负面": {
+        "precision": 0.6111111111111112,
+        "recall": 0.88,
+        "f1-score": 0.7213114754098361,
+        "support": 25.0
+      },
+      "中性": {
+        "precision": 0.75,
+        "recall": 0.6923076923076923,
+        "f1-score": 0.72,
+        "support": 26.0
+      },
+      "正面": {
+        "precision": 0.8235294117647058,
+        "recall": 0.5384615384615384,
+        "f1-score": 0.6511627906976745,
+        "support": 26.0
+      },
+      "accuracy": 0.7012987012987013,
+      "macro avg": {
+        "precision": 0.7282135076252724,
+        "recall": 0.7035897435897436,
+        "f1-score": 0.6974914220358368,
+        "support": 77.0
+      },
+      "weighted avg": {
+        "precision": 0.7297343179696121,
+        "recall": 0.7012987012987013,
+        "f1-score": 0.6971820706933173,
+        "support": 77.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        22,
+        2,
+        1
+      ],
+      [
+        6,
+        18,
+        2
+      ],
+      [
+        8,
+        4,
+        14
+      ]
+    ]
+  },
+  "dnn": {
+    "accuracy": 0.6883116883116883,
+    "precision_weighted": 0.6953252913844047,
+    "recall_weighted": 0.6883116883116883,
+    "f1_weighted": 0.6881758473634684
+  },
+  "summary": {
+    "best_model": "svm",
+    "note": "准确率(Accuracy)、精确率(Precision)、召回率(Recall)、F1值 均为 weighted 平均"
+  }
+}
